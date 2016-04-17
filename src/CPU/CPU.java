@@ -2,6 +2,8 @@ package CPU;
 
 import Memory.MemoryManagementUnit;
 
+import java.util.HashMap;
+
 /**
  * Created by devin on 4/15/16.
  *
@@ -10,17 +12,15 @@ import Memory.MemoryManagementUnit;
  * http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf
  */
 public class CPU {
-    private static final byte REGISTER_A = 0;
-    private static final byte REGISTER_B = 1;
-    private static final byte REGISTER_C = 2;
-    private static final byte REGISTER_D = 3;
-    private static final byte REGISTER_E = 4;
-    private static final byte REGISTER_H = 5;
-    private static final byte REGISTER_L = 6;
-    private static final byte REGISTER_F = 7;
-
     public static final int DEFAULT_CLOCK_CYCLES = 4;
     public static final int UNSIGNED_BYTE_MASK = 0xFF;
+    public static final int UNSIGNED_SHORT_MASK = 0xFFFF;
+
+    // Flags
+    byte ZERO_FLAG = (byte)0x80;
+    byte NEGITIVE_FLAG = 0x40;
+    byte HALF_CARRY_FLAG = 0x20;
+    byte CARRY_FLAG = 0x10;
 
     private boolean halt;
 
@@ -28,7 +28,14 @@ public class CPU {
     private Clock clock = new Clock();
 
     // 8 bit registers
-    private byte [] registers = new byte[8];
+    private byte registerA;
+    private byte registerB;
+    private byte registerC;
+    private byte registerD;
+    private byte registerE;
+    private byte registerF;
+    private byte registerH;
+    private byte registerL;
 
     // 16 bit registers
     private short programCounter;
@@ -45,12 +52,19 @@ public class CPU {
      * This method resets the processor back to its initial state.
      */
     public void reset() {
-        for (byte register : registers) {
-            register = 0x00;
-        }
+        halt = false;
 
-        programCounter = 0x0100;
-        stackPointer = (short)0xFFFF;
+        registerA = 0x00;
+        registerB = 0x00;
+        registerC = 0x00;
+        registerD = 0x00;
+        registerE = 0x00;
+        registerF = 0x00;
+        registerH = 0x00;
+        registerL = 0x00;
+
+        programCounter = 0x0000;
+        stackPointer = 0x0000;
     }
 
     /***
@@ -58,16 +72,23 @@ public class CPU {
      *
      * @return This is the number of clock cycles(T states) that have past during execution.
      */
-    public int process() {
+    public int process() throws UnknownOpCodeException {
         clock.reset();
 
         if (!halt) {
             checkInterrupts();
 
-            short opCode = memoryManagementUnit.readByte(programCounter++);
-            int cyclesPast = decode(opCode);
+            int opCode = memoryManagementUnit.readByte(programCounter) & UNSIGNED_BYTE_MASK;
+            Instruction currentInstruction = instructions.get(opCode);
+
+            if (currentInstruction == null) {
+                throw new UnknownOpCodeException(opCode);
+            }
+
+            int cyclesPast = currentInstruction.execute();
 
             clock.addMachineCycles(cyclesPast);
+            programCounter += currentInstruction.getAddToProgramCounter();
         } else {
             clock.addMachineCycles(DEFAULT_CLOCK_CYCLES);
         }
@@ -75,18 +96,26 @@ public class CPU {
         return clock.getMachineCycles();
     }
 
-    private int decode(short opCode) {
-        int cyclesPast = 0;
-
-        // TODO: Add op codes here.
-        switch (opCode & UNSIGNED_BYTE_MASK) {
-            case 0x00: cyclesPast += DEFAULT_CLOCK_CYCLES;
-        }
-
-        return cyclesPast;
-    }
-
     private void checkInterrupts() {
         // TODO: Figure this out.
     }
+
+    private void setFlag(byte flag) {
+        registerF |= flag;
+    }
+
+    private final HashMap<Integer, Instruction> instructions = new HashMap<Integer, Instruction>() {{
+        // Load a 16 bit immediate value into the stackPointer.
+        put(0x31, new Instruction("LD_SP_n", 12, 3, () -> stackPointer = memoryManagementUnit.readWord((short)(programCounter + 1))));
+
+        // Xor A
+        put(0xAF, new Instruction("Xor_A", 4, 1, () -> {
+            registerA ^= registerA;
+
+            // Set Z flag
+            if (registerA == 0) {
+                setFlag(ZERO_FLAG);
+            }
+        }));
+    }};
 }
