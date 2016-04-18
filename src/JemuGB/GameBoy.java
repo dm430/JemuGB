@@ -1,3 +1,5 @@
+package JemuGB;
+
 import CPU.CPU;
 import CPU.UnknownOpCodeException;
 import Memory.MemoryManagementUnit;
@@ -20,7 +22,7 @@ public class GameBoy {
     public void initializeRAM() throws Exception {
         if (!BIOS_FILE.exists()) {
             throw new FileNotFoundException("BIOS.bin could not be found. If you have" +
-                    " not done so already please place a copy of the GameBoy's BIOS in " +
+                    " not done so already please place a copy of the JemuGB.JemuGB's BIOS in " +
                     "the folder containing JemuGB.");
         }
 

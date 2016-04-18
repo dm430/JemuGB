@@ -12,6 +12,6 @@ public class UnknownOpCodeException extends Throwable {
 
     @Override
     public String getMessage() {
-        return "Unknown opcode: " + opCode;
+        return "Unknown opcode: " + String.format("0x%02X", opCode);
     }
 }

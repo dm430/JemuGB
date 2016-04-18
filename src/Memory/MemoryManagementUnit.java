@@ -33,10 +33,12 @@ package Memory;
 public class MemoryManagementUnit {
     // Super simple memory representation just to get this working.
     private static final int MEMORY_RANGE = 65535;
-    private byte[] memory = new byte[MEMORY_RANGE];
+    public static final int UNSIGNED_BYTE_MASK = 0xFF;
+
+    private final byte[] memory = new byte[MEMORY_RANGE];
 
     public byte readByte(short address) {
-        return memory[address];
+        return (byte)(memory[address] & 0xFF) ;
     }
 
     public void writeByte(short address, byte value) {
@@ -44,16 +46,17 @@ public class MemoryManagementUnit {
     }
 
     public short readWord(short address) {
-        /* This magically widens and reads the next byte.
-         * It also reverses the endianness. I didn't know
-         * Java did that but im not complaining.
-         */
-        return memory[address];
+        byte lowOrderBits = memory[address];
+        byte highOrderBits = memory[address + 1];
+
+        short value = (short) ((highOrderBits & UNSIGNED_BYTE_MASK) << 8 | lowOrderBits & UNSIGNED_BYTE_MASK) ;
+
+        return value;
     }
 
     public void writeWord(short address, short value) {
-        byte highOrderBits = (byte) ((value >> 8) & 0xFF);
-        byte lowOrderBits = (byte) (value & 0xFF);
+        byte highOrderBits = (byte) (value >> 8 & UNSIGNED_BYTE_MASK);
+        byte lowOrderBits = (byte) (value & UNSIGNED_BYTE_MASK);
 
         memory[address] = lowOrderBits;
         memory[address] = highOrderBits;
@@ -63,7 +66,7 @@ public class MemoryManagementUnit {
         for (int index = 0; index < binaryImage.length; index++) {
             int memoryAddress = index + memoryLocation;
 
-            if (memoryAddress > MEMORY_RANGE) {
+            if (memoryAddress > MemoryManagementUnit.MEMORY_RANGE) {
                 throw new IndexOutOfBoundsException("The address that was attempted to be written to is out of the memory range.");
             }
 

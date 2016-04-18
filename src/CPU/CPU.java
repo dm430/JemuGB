@@ -1,5 +1,6 @@
 package CPU;
 
+import JemuGB.Utilities;
 import Memory.MemoryManagementUnit;
 
 import java.util.HashMap;
@@ -105,6 +106,9 @@ public class CPU {
     }
 
     private final HashMap<Integer, Instruction> instructions = new HashMap<Integer, Instruction>() {{
+        // No operation.
+        put(0x00, new Instruction("NOP", 4, 1));
+
         // Load a 16 bit immediate value into the stackPointer.
         put(0x31, new Instruction("LD_SP_n", 12, 3, () -> stackPointer = memoryManagementUnit.readWord((short)(programCounter + 1))));
 
@@ -116,6 +120,13 @@ public class CPU {
             if (registerA == 0) {
                 setFlag(ZERO_FLAG);
             }
+        }));
+
+        // Load a 16 bit immediate value into HL.
+        put(0x21, new Instruction("LD_HL_nn", 12, 3, () -> {
+            short value =  (memoryManagementUnit.readWord((short)(programCounter + 1)));
+            registerH = Utilities.getHighBitsForWord(value);
+            registerL = Utilities.getLowBitsForWord(value);
         }));
     }};
 }

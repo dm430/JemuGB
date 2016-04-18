@@ -3,11 +3,15 @@ package CPU;
 /**
  * Created by devin on 4/16/16.
  */
+interface Command {
+    void execute();
+}
+
 public class Instruction {
     private final int cyclesPast;
     private final int addToProgramCounter;
-    private final Command command;
     private final String description;
+    private final Command command;
 
     public Instruction(String description, int cyclesPast, int addToProgramCounter, Command command) {
         this.addToProgramCounter = addToProgramCounter;
@@ -16,12 +20,17 @@ public class Instruction {
         this.command = command;
     }
 
-    public Instruction(int cyclesPast, int addToProgramCounter, Command command) {
-        this("N/A", cyclesPast, addToProgramCounter, command);
+    public Instruction(String description, int cyclesPast, int addToProgramCounter) {
+        this.addToProgramCounter = addToProgramCounter;
+        this.description = description;
+        this.cyclesPast = cyclesPast;
+        command = null;
     }
 
     public int execute() {
-        command.execute();
+        if (command != null) {
+            command.execute();
+        }
 
         return cyclesPast;
     }
@@ -44,6 +53,4 @@ public class Instruction {
     }
 }
 
-interface Command {
-    void execute();
-}
+
