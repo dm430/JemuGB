@@ -34,43 +34,46 @@ public class MemoryManagementUnit {
     // Super simple memory representation just to get this working.
     private static final int MEMORY_RANGE = 65535;
     public static final int UNSIGNED_BYTE_MASK = 0xFF;
+    public static final int UNSIGNED_SHORT_MASK = 0xFFFF;
 
     private final byte[] memory = new byte[MEMORY_RANGE];
 
     public byte readByte(short address) {
-        return (byte)(memory[address] & 0xFF) ;
+        return (byte) (memory[address & UNSIGNED_SHORT_MASK] & UNSIGNED_BYTE_MASK) ;
     }
 
     public void writeByte(short address, byte value) {
-        memory[address] = value;
+        memory[address & UNSIGNED_SHORT_MASK] = value;
     }
 
     public short readWord(short address) {
-        byte lowOrderBits = memory[address];
-        byte highOrderBits = memory[address + 1];
+        int memoryAddress = address & UNSIGNED_SHORT_MASK;
 
-        short value = (short) ((highOrderBits & UNSIGNED_BYTE_MASK) << 8 | lowOrderBits & UNSIGNED_BYTE_MASK) ;
+        byte lowOrderBits = memory[memoryAddress];
+        byte highOrderBits = memory[memoryAddress + 1];
 
-        return value;
+        return (short) ((highOrderBits & UNSIGNED_BYTE_MASK) << 8 | lowOrderBits & UNSIGNED_BYTE_MASK);
     }
 
     public void writeWord(short address, short value) {
+        int memoryAddress = address & UNSIGNED_SHORT_MASK;
+
         byte highOrderBits = (byte) (value >> 8 & UNSIGNED_BYTE_MASK);
         byte lowOrderBits = (byte) (value & UNSIGNED_BYTE_MASK);
 
-        memory[address] = lowOrderBits;
-        memory[address] = highOrderBits;
+        memory[memoryAddress] = lowOrderBits;
+        memory[memoryAddress + 1] = highOrderBits;
     }
 
     public void loadImage(byte[] binaryImage, int memoryLocation) {
         for (int index = 0; index < binaryImage.length; index++) {
             int memoryAddress = index + memoryLocation;
 
-            if (memoryAddress > MemoryManagementUnit.MEMORY_RANGE) {
+            if (memoryAddress > MEMORY_RANGE) {
                 throw new IndexOutOfBoundsException("The address that was attempted to be written to is out of the memory range.");
             }
 
-            memory[memoryAddress] = binaryImage[index];
+            memory[memoryAddress & UNSIGNED_SHORT_MASK] = binaryImage[index];
         }
     }
 }

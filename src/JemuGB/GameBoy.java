@@ -16,13 +16,13 @@ import java.io.File;
 public class GameBoy {
     private static final File BIOS_FILE = new File("./BIOS.bin");
 
-    private MemoryManagementUnit memoryManagementUnit = new MemoryManagementUnit();
-    private CPU cpu = new CPU(memoryManagementUnit);
+    private final MemoryManagementUnit memoryManagementUnit = new MemoryManagementUnit();
+    private final CPU cpu = new CPU(memoryManagementUnit);
 
     public void initializeRAM() throws Exception {
         if (!BIOS_FILE.exists()) {
             throw new FileNotFoundException("BIOS.bin could not be found. If you have" +
-                    " not done so already please place a copy of the JemuGB.JemuGB's BIOS in " +
+                    " not done so already please place a copy of the JemuGB's BIOS in " +
                     "the folder containing JemuGB.");
         }
 
@@ -44,10 +44,7 @@ public class GameBoy {
         try {
             GameBoy gameBoy = new GameBoy();
             gameBoy.powerOn();
-        } catch (Exception exception) {
-            String errorMessage = exception.getMessage();
-            System.out.println(errorMessage);
-        } catch (UnknownOpCodeException exception) {
+        } catch (Exception | UnknownOpCodeException exception) {
             String errorMessage = exception.getMessage();
             System.out.println(errorMessage);
         }

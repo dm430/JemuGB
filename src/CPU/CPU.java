@@ -26,7 +26,7 @@ public class CPU {
     private boolean halt;
 
     // This is the clock
-    private Clock clock = new Clock();
+    private final Clock clock = new Clock();
 
     // 8 bit registers
     private byte registerA;
@@ -105,12 +105,24 @@ public class CPU {
         registerF |= flag;
     }
 
+    private void clearFlag(byte flag) {
+        registerF ^= flag;
+    }
+
     private final HashMap<Integer, Instruction> instructions = new HashMap<Integer, Instruction>() {{
         // No operation.
         put(0x00, new Instruction("NOP", 4, 1));
 
+        /*
+         * This performs no real operation in this emulator.
+         * However the opCode needs to be consumed.
+         */
+        put(0xCB, new Instruction("Switch instruction sets", 4, 1));
+
         // Load a 16 bit immediate value into the stackPointer.
-        put(0x31, new Instruction("LD_SP_n", 12, 3, () -> stackPointer = memoryManagementUnit.readWord((short)(programCounter + 1))));
+        put(0x31, new Instruction("LD_SP_n", 12, 3, () -> {
+            stackPointer = memoryManagementUnit.readWord((short) (programCounter + 1));
+        }));
 
         // Xor A
         put(0xAF, new Instruction("Xor_A", 4, 1, () -> {
@@ -124,9 +136,30 @@ public class CPU {
 
         // Load a 16 bit immediate value into HL.
         put(0x21, new Instruction("LD_HL_nn", 12, 3, () -> {
-            short value =  (memoryManagementUnit.readWord((short)(programCounter + 1)));
+            short value = memoryManagementUnit.readWord((short) (programCounter + 1));
+
             registerH = Utilities.getHighBitsForWord(value);
             registerL = Utilities.getLowBitsForWord(value);
+        }));
+
+        // Put A into memory address HL. Decrement HL.
+        put(0x32, new Instruction("LD_HL-_A", 8, 1, () -> {
+            short address = Utilities.buildWord(registerH, registerL);
+
+            memoryManagementUnit.writeByte(address--, registerA);
+            registerH = Utilities.getHighBitsForWord(address);
+            registerL = Utilities.getLowBitsForWord(address);
+        }));
+
+        // Test the most significant bit in H.
+        put(0x7C, new Instruction("BIT_7_H", 8, 1, () -> {
+            boolean isHighBitSet = (registerF & ZERO_FLAG) != 0;
+
+            if (isHighBitSet) {
+                clearFlag(ZERO_FLAG);
+            } else {
+                setFlag(ZERO_FLAG);
+            }
         }));
     }};
 }

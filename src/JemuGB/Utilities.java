@@ -13,4 +13,8 @@ public class Utilities {
     public static byte getLowBitsForWord(short word) {
         return (byte) (word & BYTE_MASK);
     }
+
+    public static short buildWord(byte highOrderBits, byte lowOrderBits) {
+        return (short) ((highOrderBits & BYTE_MASK) << 8 | lowOrderBits & BYTE_MASK);
+    }
 }
