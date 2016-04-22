@@ -13,15 +13,16 @@ import java.util.HashMap;
  * http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf
  */
 public class CPU {
-    public static final int DEFAULT_CLOCK_CYCLES = 4;
-    public static final int UNSIGNED_BYTE_MASK = 0xFF;
-    public static final int UNSIGNED_SHORT_MASK = 0xFFFF;
+    private static final int DEFAULT_CLOCK_CYCLES = 4;
+    private static final int UNSIGNED_BYTE_MASK = 0xFF;
+    private static final int UNSIGNED_SHORT_MASK = 0xFFFF;
+    private static final int SWITCH_INSTRUCTION_SET = 0xCB;
 
     // Flags
-    byte ZERO_FLAG = (byte)0x80;
-    byte NEGITIVE_FLAG = 0x40;
-    byte HALF_CARRY_FLAG = 0x20;
-    byte CARRY_FLAG = 0x10;
+    private final byte ZERO_FLAG = (byte)0x80;
+    private final byte NEGATIVE_FLAG = 0x40;
+    private final byte HALF_CARRY_FLAG = 0x20;
+    private final byte CARRY_FLAG = 0x10;
 
     private boolean halt;
 
@@ -79,8 +80,15 @@ public class CPU {
         if (!halt) {
             checkInterrupts();
 
+            Instruction currentInstruction;
             int opCode = memoryManagementUnit.readByte(programCounter) & UNSIGNED_BYTE_MASK;
-            Instruction currentInstruction = instructions.get(opCode);
+
+            if (opCode == SWITCH_INSTRUCTION_SET) {
+                opCode = memoryManagementUnit.readByte(++programCounter) & UNSIGNED_BYTE_MASK;
+                currentInstruction = alternateInstructions.get(opCode);
+            } else {
+                currentInstruction = instructions.get(opCode);
+            }
 
             if (currentInstruction == null) {
                 throw new UnknownOpCodeException(opCode);
@@ -106,18 +114,29 @@ public class CPU {
     }
 
     private void clearFlag(byte flag) {
-        registerF ^= flag;
+        registerF &= ~flag;
     }
+
+    private boolean isFlagSet(byte flag) {
+        return (registerF & flag) != 0;
+    }
+
+    private final HashMap<Integer, Instruction> alternateInstructions = new HashMap<Integer, Instruction>() {{
+        // Test the most significant bit in H.
+        put(0x7C, new Instruction("BIT_7_H", 8, 1, () -> {
+            boolean isHighBitSet = (registerH & ZERO_FLAG) != 0;
+
+            if (isHighBitSet) {
+                clearFlag(ZERO_FLAG);
+            } else {
+                setFlag(ZERO_FLAG);
+            }
+        }));
+    }};
 
     private final HashMap<Integer, Instruction> instructions = new HashMap<Integer, Instruction>() {{
         // No operation.
         put(0x00, new Instruction("NOP", 4, 1));
-
-        /*
-         * This performs no real operation in this emulator.
-         * However the opCode needs to be consumed.
-         */
-        put(0xCB, new Instruction("Switch instruction sets", 4, 1));
 
         // Load a 16 bit immediate value into the stackPointer.
         put(0x31, new Instruction("LD_SP_n", 12, 3, () -> {
@@ -151,15 +170,34 @@ public class CPU {
             registerL = Utilities.getLowBitsForWord(address);
         }));
 
-        // Test the most significant bit in H.
-        put(0x7C, new Instruction("BIT_7_H", 8, 1, () -> {
-            boolean isHighBitSet = (registerF & ZERO_FLAG) != 0;
-
-            if (isHighBitSet) {
-                clearFlag(ZERO_FLAG);
-            } else {
-                setFlag(ZERO_FLAG);
+        /* If the condition is not zero, add a signed byte to the
+         * current address.
+         */
+        put(0x20, new Instruction("JR_NZ_n", 8, 2, () -> {
+            if (!isFlagSet(ZERO_FLAG)) {
+                byte value = memoryManagementUnit.readByte((short) (programCounter + 1));
+                // I don't need to add two here because it is added after this finishes executing.
+                programCounter = (short) (programCounter + value);
             }
+        }));
+
+        // Load a 8 bit immediate value into C.
+        put(0x0E, new Instruction("LD_C_n", 8, 2, () -> {
+            registerC = memoryManagementUnit.readByte((short) (programCounter + 1));
+        }));
+
+        // Load a 8 bit immediate value into A.
+        put(0x3E, new Instruction("LD_A_n", 8, 2, () -> {
+            registerA = memoryManagementUnit.readByte((short) (programCounter + 1));
+        }));
+
+        /* Put A into the address (0xFF00 + C)
+         * The documentation says this increments the PC by 2. However it seems
+         * that others implementations agree that it increments the PC by one.
+         */
+        put(0xE2, new Instruction("LD_FF00+C_A", 8, 1, () -> {
+            short address = (short) (0xFF00 + registerC);
+            memoryManagementUnit.writeByte(address, registerA);
         }));
     }};
 }

@@ -47,6 +47,7 @@ public class GameBoy {
         } catch (Exception | UnknownOpCodeException exception) {
             String errorMessage = exception.getMessage();
             System.out.println(errorMessage);
+            exception.printStackTrace();
         }
     }
 }
