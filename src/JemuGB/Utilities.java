@@ -17,4 +17,8 @@ public class Utilities {
     public static short buildWord(byte highOrderBits, byte lowOrderBits) {
         return (short) ((highOrderBits & BYTE_MASK) << 8 | lowOrderBits & BYTE_MASK);
     }
+
+    public static short buildWord(int baseAddress, byte lowBytes) {
+        return (short) (baseAddress + (lowBytes & BYTE_MASK));
+    }
 }

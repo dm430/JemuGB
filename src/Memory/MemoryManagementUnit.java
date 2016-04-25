@@ -39,7 +39,7 @@ public class MemoryManagementUnit {
     private final byte[] memory = new byte[MEMORY_RANGE];
 
     public byte readByte(short address) {
-        return (byte) (memory[address & UNSIGNED_SHORT_MASK] & UNSIGNED_BYTE_MASK) ;
+        return (byte) (memory[address & UNSIGNED_SHORT_MASK] & UNSIGNED_BYTE_MASK);
     }
 
     public void writeByte(short address, byte value) {

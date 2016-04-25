@@ -151,9 +151,13 @@ public class CPU {
             if (registerA == 0) {
                 setFlag(ZERO_FLAG);
             }
+
+            clearFlag(NEGATIVE_FLAG);
+            clearFlag(HALF_CARRY_FLAG);
+            clearFlag(CARRY_FLAG);
         }));
 
-        // Load a 16 bit immediate value into HL.
+        // Load a 16 bit value into HL.
         put(0x21, new Instruction("LD_HL_nn", 12, 3, () -> {
             short value = memoryManagementUnit.readWord((short) (programCounter + 1));
 
@@ -196,8 +200,43 @@ public class CPU {
          * that others implementations agree that it increments the PC by one.
          */
         put(0xE2, new Instruction("LD_FF00+C_A", 8, 1, () -> {
-            short address = (short) (0xFF00 + registerC);
+            short address = Utilities.buildWord(0xFF00, registerC);
             memoryManagementUnit.writeByte(address, registerA);
+        }));
+
+        // Increment register C
+        put(0x0C, new Instruction("INC_C", 4, 1, () -> {
+            clearFlag(NEGATIVE_FLAG);
+
+            if ((++registerC & 0x0F) == 0) {
+                setFlag(HALF_CARRY_FLAG);
+            }
+
+            if (registerC == 0) {
+                setFlag(ZERO_FLAG);
+            }
+        }));
+
+        // Put A into the address in HL.
+        put(0x77, new Instruction("LD_(HL)_A", 8, 1, () -> {
+            short address = Utilities.buildWord(registerH, registerL);
+            memoryManagementUnit.writeByte(address, registerA);
+        }));
+
+        // Put A into memory address (0xFF00 + n). n is a one byte immediate value.
+        put(0xE0, new Instruction("LDH_(n)_A", 12, 2, () -> {
+            byte value = memoryManagementUnit.readByte((short) (programCounter + 1));
+            short address = Utilities.buildWord(0xFF00, value);
+
+            memoryManagementUnit.writeByte(address, registerA);
+        }));
+
+        // Load a 16 bit value at address into DE.
+        put(0x11, new Instruction("LD_DE_n", 12, 3, () -> {
+            short value = memoryManagementUnit.readWord((short) (programCounter + 1));
+
+            registerD = Utilities.getHighBitsForWord(value);
+            registerE = Utilities.getLowBitsForWord(value);
         }));
     }};
 }
