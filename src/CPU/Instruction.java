@@ -8,7 +8,7 @@ interface Command {
 }
 
 public class Instruction {
-    private final int cyclesPast;
+    protected final int cyclesPast;
     private final int addToProgramCounter;
     private final String description;
     private final Command command;

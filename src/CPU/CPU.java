@@ -121,6 +121,11 @@ public class CPU {
         return (registerF & flag) != 0;
     }
 
+    private void pushWordToStack(short value) {
+        memoryManagementUnit.writeByte(--stackPointer, Utilities.getLowBitsForWord(value));
+        memoryManagementUnit.writeByte(--stackPointer, Utilities.getHighBitsForWord(value));
+    }
+
     private final HashMap<Integer, Instruction> alternateInstructions = new HashMap<Integer, Instruction>() {{
         // Test the most significant bit in H.
         put(0x7C, new Instruction("BIT_7_H", 8, 1, () -> {
@@ -237,6 +242,22 @@ public class CPU {
 
             registerD = Utilities.getHighBitsForWord(value);
             registerE = Utilities.getLowBitsForWord(value);
+        }));
+
+        // Load byte from address in DE into A
+        put(0x1A, new Instruction("LD_A_(DE)", 8, 1, () -> {
+            short address = Utilities.buildWord(registerD, registerE);
+            registerA = memoryManagementUnit.readByte(address);
+        }));
+
+        // Push address of next instruction onto stack and then jump to two byte immediate
+        put(0xCD, new Instruction("CALL_nn", 12, 3, () -> {
+            short value = memoryManagementUnit.readWord((short) (programCounter + 1));
+            short nextInstructionAddress = (short) (programCounter + 3);
+
+            pushWordToStack(nextInstructionAddress);
+            // Subtract 3 so that it does not jump past the address
+            programCounter = (short) (value - 3);
         }));
     }};
 }
