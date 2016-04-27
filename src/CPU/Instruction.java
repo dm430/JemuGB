@@ -7,6 +7,12 @@ interface Command {
     void execute();
 }
 
+class NullCommand implements Command {
+
+    @Override
+    public void execute() {}
+}
+
 public class Instruction {
     protected final int cyclesPast;
     private final int addToProgramCounter;
@@ -21,18 +27,11 @@ public class Instruction {
     }
 
     public Instruction(String description, int cyclesPast, int addToProgramCounter) {
-        this.addToProgramCounter = addToProgramCounter;
-        this.description = description;
-        this.cyclesPast = cyclesPast;
-        command = null;
+        this(description, cyclesPast, addToProgramCounter, new NullCommand());
     }
 
-    public int execute() {
-        if (command != null) {
-            command.execute();
-        }
-
-        return cyclesPast;
+    public void execute() {
+        command.execute();
     }
 
     public int getCyclesPast() {

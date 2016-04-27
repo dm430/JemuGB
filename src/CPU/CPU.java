@@ -25,6 +25,7 @@ public class CPU {
     private final byte CARRY_FLAG = 0x10;
 
     private boolean halt;
+    private boolean hasProgramCounterJumped;
 
     // This is the clock
     private final Clock clock = new Clock();
@@ -94,13 +95,18 @@ public class CPU {
                 throw new UnknownOpCodeException(opCode);
             }
 
-            int cyclesPast = currentInstruction.execute();
+            currentInstruction.execute();
 
-            clock.addMachineCycles(cyclesPast);
-            programCounter += currentInstruction.getAddToProgramCounter();
+            clock.addMachineCycles(currentInstruction.getCyclesPast());
+
+            if (!hasProgramCounterJumped) {
+                programCounter += currentInstruction.getAddToProgramCounter();
+            }
         } else {
             clock.addMachineCycles(DEFAULT_CLOCK_CYCLES);
         }
+
+        hasProgramCounterJumped = false;
 
         return clock.getMachineCycles();
     }
@@ -185,8 +191,9 @@ public class CPU {
         put(0x20, new Instruction("JR_NZ_n", 8, 2, () -> {
             if (!isFlagSet(ZERO_FLAG)) {
                 byte value = memoryManagementUnit.readByte((short) (programCounter + 1));
-                // I don't need to add two here because it is added after this finishes executing.
-                programCounter = (short) (programCounter + value);
+
+                programCounter = (short) (programCounter + value + 2);
+                hasProgramCounterJumped = true;
             }
         }));
 
@@ -256,8 +263,8 @@ public class CPU {
             short nextInstructionAddress = (short) (programCounter + 3);
 
             pushWordToStack(nextInstructionAddress);
-            // Subtract 3 so that it does not jump past the address
-            programCounter = (short) (value - 3);
+            programCounter = value;
+            hasProgramCounterJumped = true;
         }));
     }};
 }
